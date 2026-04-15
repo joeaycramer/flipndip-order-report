@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Report</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Montserrat', sans-serif;
+      background: #1a1a1a;
+      color: #ddd;
+      padding: 0;
+      margin: 0;
+      max-width: 100%;
+    }
+    
+    .upload-section {
+      background: url('TRUST-PATTERN-NEW-LARGE.png');
+      background-size: cover;
+      background-position: center;
+      color: white;
+      padding: 4rem 2rem;
+      text-align: center;
+      min-height: 40vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .upload-section h1 {
+      font-size: 2.5rem;
+      margin: 0 0 0.5rem 0;
+      font-weight: 700;
+      width: 400px;
+    }
+    
+    .upload-section p {
+      font-size: 1.1rem;
+      margin: 0 0 2rem 0;
+      opacity: 0.9;
+    }
+    
+    .upload-box {
+      background: rgba(0, 0, 0, 0.3);
+      border: 2px dashed rgba(255, 255, 255, 0.3);
+      border-radius: 12px;
+      padding: 2rem;
+      max-width: 450px;
+      width: 100%;
+      backdrop-filter: blur(10px);
+    }
+    
+    .upload-box label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      font-size: 1.1rem;
+    }
+    
+    .upload-box input[type="file"] {
+      display: block;
+      width: 100%;
+      padding: 0.75rem;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+    
+    .upload-box input[type="file"]::file-selector-button {
+      background: white;
+      color: #667eea;
+      border: none;
+      padding: 0.4rem 1rem;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-right: 0.5rem;
+      font-size: 0.9rem;
+    }
+    
+    .upload-hint {
+      font-size: 0.9rem;
+      opacity: 0.8;
+      margin: 0;
+    }
+    
+    .filter-section {
+      background: #2d2d2d;
+      padding: 2rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: center;
+    }
+    
+    #content {
+      padding: 2rem;
+      max-width: 1400px;
+      margin: auto;
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+    .meta {
+      font-size: 0.9rem;
+      color: #aaa;
+      margin-bottom: 2rem;
+    }
+    h2 { font-size: 1.1rem; margin: 2rem 0 0.5rem; color: #ddd; }
+    details {
+      background: #2d2d2d;
+      border: 1px solid #444;
+      border-radius: 6px;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    details[open] {
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    details > summary {
+      cursor: pointer;
+      user-select: none;
+      padding: 0.5rem 0;
+    }
+    details > summary:hover {
+      opacity: 0.8;
+    }
+    details > summary h2 {
+      margin: 0;
+      display: inline;
+      color: #ddd;
+    }
+    details > *:not(summary) {
+      margin-top: 1rem;
+    }
+    .red   { color: #c0392b; }
+    .orange{ color: #e67e22; }
+    .yellow{ color: #b8860b; }
+    .green { color: #27ae60; }
+    .blue  { color: #3498db; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #2d2d2d;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      margin-bottom: 1rem;
+    }
+    thead tr { background: #1a1a1a; }
+    th {
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #ccc;
+      border-bottom: 1px solid #444;
+      width: 300px
+    }
+    td {
+      padding: 9px 14px;
+      font-size: 0.9rem;
+      border-bottom: 1px solid #444;
+      color: #ddd;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #3a3a3a; }
+    strong { font-weight: 600; }
+    .filter-box {
+      background: #2d2d2d;
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      flex-wrap: wrap;
+      max-width: 1400px;
+      margin: auto;
+      justify-content: center;
+    }
+    .filter-box label {
+      font-weight: 600;
+      color: #ddd;
+      margin: 0;
+      white-space: nowrap;
+    }
+    .filter-box select {
+      padding: 8px 12px;
+      border: 1px solid #666;
+      border-radius: 4px;
+      font-size: 0.95rem;
+      min-width: 180px;
+      background: #3a3a3a;
+      cursor: pointer;
+      color: #ddd;
+    }
+    .filter-box select:hover {
+      border-color: #667eea;
+    }
+    .filter-box button {
+      padding: 8px 16px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.3s;
+    }
+    .filter-box button:hover {
+      background: #5568d3;
+    }
+  </style>
+</head>
+<body>
+  <div class="upload-section">
+    <h1>Flip n Dip order report generator</h1>
+    <p>Upload your CSV file to get started</p>
+    <div class="upload-box">
+      <label for="csv-file">📁 Choose CSV File:</label>
+      <input type="file" id="csv-file" accept=".csv" onchange="handleCSVUpload(event)">
+    </div>
+  </div>
+
+  <div class="filter-section">
+    <div class="filter-box">
+      <label for="supplier-select">📋 Supplier:</label>
+      <select id="supplier-select" onchange="applyFilter()"></select>
+      
+      <label for="days-after-delivery">⏱️ Coverage:</label>
+      <select id="days-after-delivery" onchange="applyFilter()">
+        <option value="14">2 weeks</option>
+        <option value="28">4 weeks</option>
+        <option value="42">6 weeks</option>
+        <option value="56">8 weeks</option>
+        <option value="90" selected>3 months</option>
+        <option value="120">4 months</option>
+      </select>
+      
+      <label for="lead-time">📦 Buffer Time:</label>
+      <select id="lead-time" onchange="applyFilter()">
+        <option value="7">1 week</option>
+        <option value="14">2 weeks</option>
+        <option value="21">3 weeks</option>
+        <option value="28">4 weeks</option>
+        <option value="35">5 weeks</option>
+        <option value="42" selected>6 weeks</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="content">Loading...</div>
+  <script src="suppliercode.js"></script>
+</body>
+</html>

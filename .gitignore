@@ -1,0 +1,25 @@
+# OS files
+.DS_Store
+*.zip
+
+# Python files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Backup files
+*_backup.js
+*.bak
+
+# Temporary files
+*.tmp
+node_modules/
