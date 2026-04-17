@@ -176,9 +176,18 @@ async function handleCSVUpload(event) {
 
 // Charger le CSV (depuis file ou depuis le serveur)
 async function loadCSVContent() {
+  // Vérifier d'abord la variable locale csvContent
   if (csvContent) {
     return csvContent;
   }
+  
+  // Vérifier aussi window.csvContent (utilisé par Firebase)
+  if (window.csvContent) {
+    csvContent = window.csvContent;
+    return csvContent;
+  }
+  
+  // Fallback: essayer de charger depuis le serveur
   const response = await fetch(CSV_PATH);
   return await response.text();
 }
