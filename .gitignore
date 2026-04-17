@@ -18,6 +18,12 @@ __pycache__/
 
 # Backup files
 *_backup.js
+
+# Firebase configuration
+firebase-config.js
+.env
+.env.local
+node_modules/
 *.bak
 
 # Temporary files

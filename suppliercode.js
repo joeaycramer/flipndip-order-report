@@ -156,6 +156,21 @@ async function handleCSVUpload(event) {
   reader.onload = async (e) => {
     csvContent = e.target.result;
     document.getElementById('supplier-select').value = '';
+    
+    // Save CSV metadata to Firebase
+    if (window.firebaseDB) {
+      try {
+        const fileName = file.name;
+        const timestamp = new Date();
+        
+        // Dynamic import to use the Firebase functions
+        const { saveCSVMetadata } = await import('./firebase-config.js');
+        await saveCSVMetadata(fileName, timestamp, csvContent);
+      } catch (error) {
+        console.error('Error saving to Firebase:', error);
+      }
+    }
+    
     await initializeFilter();
     await generateReport();
   };
@@ -826,6 +841,10 @@ function applyFilter() {
   const leadTime = parseInt(document.getElementById('lead-time').value) || LEAD_TIME;
   generateReport(supplier || null, daysAfterDelivery, leadTime);
 }
+
+// Make functions available to window for Firebase loading
+window.initializeFilter = initializeFilter;
+window.generateReport = generateReport;
 
 // Initialisation
 window.addEventListener('DOMContentLoaded', async () => {

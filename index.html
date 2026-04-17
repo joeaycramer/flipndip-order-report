@@ -331,7 +331,14 @@
     </div>
   </div>
 
+  <!-- Section des fichiers récents -->
+  <div id="recent-files-section" style="display: none; background: #2d2d2d; padding: 1rem; margin: 0.5rem 1rem; border-radius: 6px; border: 1px solid #444;">
+    <h3 style="margin: 0 0 0.5rem 0; color: #ddd; font-size: 1rem;">📁 Recent Files</h3>
+    <div id="recent-files-list" style="display: flex; gap: 0.5rem; flex-wrap: wrap;"></div>
+  </div>
+
   <div id="content">Loading...</div>
-  <script src="suppliercode.js"></script>
+  <script type="module" src="firebase-config.js"></script>
+  <script type="module" src="suppliercode.js"></script>
 </body>
 </html>
