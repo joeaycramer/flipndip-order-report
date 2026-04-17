@@ -7,6 +7,12 @@ const SUSPICIOUS_SALES_THRESHOLD = 0.1;
 const SUSPICIOUS_STOCK_THRESHOLD = 10;
 const COVERAGE_OPTIONS = [15, 30, 45, 60];
 
+// Objet pour stocker les modifications par pièce (clé: "Part Name")
+let itemModifications = {};
+
+// Objet pour stocker les sélections par pièce
+let selectedItems = {};
+
 // ── Helpers ───────────────────────────────────────────────────
 function toFloat(val) {
   const num = parseFloat(val);
@@ -41,42 +47,64 @@ function parseCSVLine(line) {
 }
 
 // ── Exporter un tableau en CSV ───────────────────────────────────
-function exportToCSV(rows, categoryName, isGoodMaterials = false, selectedSupplier = '') {
-  if (rows.length === 0) {
+function exportToCSV(rows, categoryName, isGoodMaterials = false, selectedSupplier = '', isIncomingStock = false, filterMode = 'all') {
+  // filterMode peut être: 'all' (tous), 'selected' (seulement sélectionnés), 'unselected' (seulement non-sélectionnés)
+  
+  let filteredRows = rows;
+  
+  if (filterMode === 'selected') {
+    filteredRows = rows.filter(r => selectedItems[r['Part Name']]);
+  } else if (filterMode === 'unselected') {
+    filteredRows = rows.filter(r => !selectedItems[r['Part Name']]);
+  }
+  
+  if (filteredRows.length === 0) {
     alert('Aucune donnée à exporter pour cette catégorie.');
     return;
   }
 
   let headers, csvContent;
 
-  if (isGoodMaterials) {
-    // Pour Good Materials et Incoming Stock, exporter seulement Part Name
-    headers = ['Part Name'];
+  if (isIncomingStock) {
+    // Pour Incoming Stock, exporter avec la colonne "Lasting Days After Delivery"
+    headers = ['Materials', 'Stock', 'Daily Sales', 'Current Days', 'Incoming Inventory', 'Lasting Days After Delivery'];
+  } else if (isGoodMaterials) {
+    // Pour Good Materials, exporter seulement Materials
+    headers = ['Materials'];
   } else {
     // Pour les autres catégories
     const isKomacut = selectedSupplier && selectedSupplier.toLowerCase() === 'komacut';
     const isAllSuppliers = !selectedSupplier || selectedSupplier === '';
     
-    // Si supplier est "komacut", utiliser "Rounded Order Quantity" à la place de "Exact Order Quantity"
-    if (isKomacut) {
-      headers = ['Part Name', 'Rounded Order Quantity'];
+    // Si supplier est "All Suppliers", fusionner les colonnes en "Quantity"
+    if (isAllSuppliers) {
+      headers = ['Materials', 'Quantity'];
+    } else if (isKomacut) {
+      // Si supplier est "komacut", utiliser "Rounded Order Quantity"
+      headers = ['Materials', 'Quantity'];
     } else {
-      headers = ['Part Name', 'Exact Order Quantity'];
-      
-      // Si supplier est "All Suppliers", ajouter aussi "Rounded Order Quantity"
-      if (isAllSuppliers) {
-        if (rows.some(r => r['Rounded Order Quantity'] && r['Rounded Order Quantity'] !== '-')) {
-          headers.push('Rounded Order Quantity');
-        }
-      }
+      // Pour les autres suppliers, utiliser "Exact Order Quantity"
+      headers = ['Materials', 'Quantity'];
     }
   }
 
   csvContent = headers.map(h => `"${h}"`).join(',') + '\n';
 
-  rows.forEach(r => {
+  filteredRows.forEach(r => {
     const rowData = [];
-    if (isGoodMaterials) {
+    if (isIncomingStock) {
+      // Pour Incoming Stock, exporter tous les détails
+      const totalStock = r['Stock'] + r['Incoming Inventory'];
+      const dailySales = r['Daily Sales'] || 0;
+      const lastingDaysAfterDelivery = dailySales > 0 ? Math.round((totalStock / dailySales) * 10) / 10 : 'N/A';
+      
+      rowData.push(`"${r['Part Name']}"`);
+      rowData.push(`"${r['Stock']}"`);
+      rowData.push(`"${r['Daily Sales']}"`);
+      rowData.push(`"${r['Current Days']}"`);
+      rowData.push(`"${r['Incoming Inventory']}"`);
+      rowData.push(`"${lastingDaysAfterDelivery}"`);
+    } else if (isGoodMaterials) {
       rowData.push(`"${r['Part Name']}"`);
     } else {
       rowData.push(`"${r['Part Name']}"`);
@@ -84,23 +112,26 @@ function exportToCSV(rows, categoryName, isGoodMaterials = false, selectedSuppli
       const isKomacut = selectedSupplier && selectedSupplier.toLowerCase() === 'komacut';
       const isAllSuppliers = !selectedSupplier || selectedSupplier === '';
       
-      // Si supplier est "komacut", exporter Rounded Order Quantity
-      if (isKomacut) {
-        const arrondi = r['Rounded Order Quantity'] !== null && r['Rounded Order Quantity'] !== '-' ? r['Rounded Order Quantity'] : '';
-        rowData.push(`"${arrondi}"`);
-      } else {
-        // Sinon exporter Exact Order Quantity
-        rowData.push(`"${r['Exact Order Quantity']}"`);
-        
-        // Si supplier est "All Suppliers", ajouter aussi "Rounded Order Quantity"
-        if (isAllSuppliers) {
-          if (headers.includes('Rounded Order Quantity')) {
-            const arrondi = r['Rounded Order Quantity'] !== null && r['Rounded Order Quantity'] !== '-' ? r['Rounded Order Quantity'] : '';
-            rowData.push(`"${arrondi}"`);
-          }
+      // Déterminer la quantité à exporter
+      let quantity = '';
+      if (isAllSuppliers) {
+        // Si "All Suppliers", afficher Rounded si disponible, sinon Exact
+        if (r['Rounded Order Quantity'] && r['Rounded Order Quantity'] !== '-') {
+          quantity = r['Rounded Order Quantity'];
+        } else {
+          quantity = r['Exact Order Quantity'];
         }
+      } else if (isKomacut) {
+        // Si "komacut", afficher Rounded
+        quantity = r['Rounded Order Quantity'] !== null && r['Rounded Order Quantity'] !== '-' ? r['Rounded Order Quantity'] : '';
+      } else {
+        // Pour les autres suppliers, afficher Exact
+        quantity = r['Exact Order Quantity'];
       }
+      
+      rowData.push(`"${quantity}"`);
     }
+    
     csvContent += rowData.join(',') + '\n';
   });
 
@@ -314,7 +345,7 @@ async function getSuppliers() {
 }
 
 // Construire un tableau HTML
-function buildTable(rows, showArrondi, isGoodMaterials = false, isIncomingStock = false) {
+function buildTable(rows, showArrondi, isGoodMaterials = false, isIncomingStock = false, enableEdit = false) {
   if (rows.length === 0) {
     return '<p><em>Aucune pièce dans cette catégorie.</em></p>';
   }
@@ -322,7 +353,7 @@ function buildTable(rows, showArrondi, isGoodMaterials = false, isIncomingStock 
   let headers, html;
 
   if (isIncomingStock) {
-    headers = ['Part Name', 'Stock', 'Daily Sales', 'Current Days', 'Incoming Inventory'];
+    headers = ['Part Name', 'Stock', 'Daily Sales', 'Current Days', 'Incoming Inventory', 'Lasting Days After Delivery'];
     
     html = '<table>\n<thead><tr>';
     headers.forEach(h => {
@@ -330,13 +361,19 @@ function buildTable(rows, showArrondi, isGoodMaterials = false, isIncomingStock 
     });
     html += '</tr></thead>\n<tbody>\n';
 
-    rows.forEach(r => {
-      html += '<tr>';
+    rows.forEach((r, index) => {
+      // Calculer les jours de couverture après livraison
+      const totalStock = r['Stock'] + r['Incoming Inventory'];
+      const dailySales = r['Daily Sales'] || 0;
+      const lastingDaysAfterDelivery = dailySales > 0 ? Math.round((totalStock / dailySales) * 10) / 10 : 'N/A';
+      
+      html += `<tr>`;
       html += `<td>${r['Part Name']}</td>`;
       html += `<td>${r['Stock']}</td>`;
       html += `<td>${r['Daily Sales']}</td>`;
       html += `<td>${r['Current Days']}</td>`;
       html += `<td>${r['Incoming Inventory']}</td>`;
+      html += `<td>${lastingDaysAfterDelivery}</td>`;
       html += '</tr>\n';
     });
   } else if (isGoodMaterials) {
@@ -370,8 +407,18 @@ function buildTable(rows, showArrondi, isGoodMaterials = false, isIncomingStock 
     html += '</tr></thead>\n<tbody>\n';
 
     rows.forEach(r => {
-      html += '<tr>';
-      html += `<td>${r['Part Name']}</td>`;
+      const rowId = `row_${Math.random().toString(36).substr(2, 9)}`;
+      
+      html += `<tr ${enableEdit ? `id="${rowId}" class="editable-row"` : ''}>`;
+      if (enableEdit) {
+        html += `<td class="part-name-cell">
+          <button class="select-btn" data-row-id="${rowId}" data-part-name="${r['Part Name']}">☐</button>
+          <span>${r['Part Name']}</span> 
+          <button class="edit-btn" data-row-id="${rowId}" data-part-name="${r['Part Name']}">Edit</button>
+        </td>`;
+      } else {
+        html += `<td>${r['Part Name']}</td>`;
+      }
       html += `<td>${r['Stock']}</td>`;
       html += `<td>${r['Daily Sales']}</td>`;
       html += `<td>${r['Current Days']}</td>`;
@@ -382,6 +429,35 @@ function buildTable(rows, showArrondi, isGoodMaterials = false, isIncomingStock 
         html += `<td><strong>${arrondi}</strong></td>`;
       }
       html += '</tr>\n';
+      
+      // Rangée d'édition cachée (seulement si enableEdit est true)
+      if (enableEdit) {
+        const storedModifications = itemModifications[r['Part Name']] || {};
+        html += `<tr class="edit-row" id="edit_${rowId}" style="display: none;">`;
+        html += `<td colspan="${showArrondi ? 7 : 6}" style="padding: 1rem; background: #3a3a3a; border-radius: 6px;">`;
+        html += `<div style="display: flex; gap: 2rem;">`;
+        html += `<div><label style="color: #ddd;">Coverage:</label><br><select class="coverage-input" style="width: 120px; padding: 5px; background: #2d2d2d; color: #ddd; border: 1px solid #666; border-radius: 3px; cursor: pointer;">
+          <option value="14" ${(storedModifications.coverage || DAYS_TO_COVER) == 14 ? 'selected' : ''}>2 weeks</option>
+          <option value="28" ${(storedModifications.coverage || DAYS_TO_COVER) == 28 ? 'selected' : ''}>4 weeks</option>
+          <option value="42" ${(storedModifications.coverage || DAYS_TO_COVER) == 42 ? 'selected' : ''}>6 weeks</option>
+          <option value="56" ${(storedModifications.coverage || DAYS_TO_COVER) == 56 ? 'selected' : ''}>8 weeks</option>
+          <option value="90" ${(storedModifications.coverage || DAYS_TO_COVER) == 90 ? 'selected' : ''}>3 months</option>
+          <option value="120" ${(storedModifications.coverage || DAYS_TO_COVER) == 120 ? 'selected' : ''}>4 months</option>
+        </select></div>`;
+        html += `<div><label style="color: #ddd;">Buffer Time:</label><br><select class="buffer-input" style="width: 120px; padding: 5px; background: #2d2d2d; color: #ddd; border: 1px solid #666; border-radius: 3px; cursor: pointer;">
+          <option value="7" ${(storedModifications.buffer || LEAD_TIME) == 7 ? 'selected' : ''}>1 week</option>
+          <option value="14" ${(storedModifications.buffer || LEAD_TIME) == 14 ? 'selected' : ''}>2 weeks</option>
+          <option value="21" ${(storedModifications.buffer || LEAD_TIME) == 21 ? 'selected' : ''}>3 weeks</option>
+          <option value="28" ${(storedModifications.buffer || LEAD_TIME) == 28 ? 'selected' : ''}>4 weeks</option>
+          <option value="35" ${(storedModifications.buffer || LEAD_TIME) == 35 ? 'selected' : ''}>5 weeks</option>
+          <option value="42" ${(storedModifications.buffer || LEAD_TIME) == 42 ? 'selected' : ''}>6 weeks</option>
+        </select></div>`;
+        html += `<div style="display: flex; align-items: flex-end; gap: 1rem;">`;
+        html += `<button class="save-btn" data-row-id="${rowId}" data-part-name="${r['Part Name']}" style="padding: 5px 15px; background: #27ae60; color: white; border: none; border-radius: 3px; cursor: pointer;">Save</button>`;
+        html += `<button class="cancel-btn" data-row-id="${rowId}" style="padding: 5px 15px; background: #c0392b; color: white; border: none; border-radius: 3px; cursor: pointer;">Cancel</button>`;
+        html += `</div></div></td>`;
+        html += `</tr>\n`;
+      }
     });
   }
 
@@ -413,46 +489,226 @@ async function generateReport(selectedSupplier = null, daysAfterDelivery = DAYS_
 
   ${data.negativeStock.length > 0 ? `
     <details open>
-      <summary><h2><span class="red">🔴 Critical Stock</span> <button class="export-btn" data-category="negativeStock" style="margin-left: 1rem; padding: 0.5rem 1rem; background: #c0392b; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export</button></h2></summary>
-      ${buildTable(data.negativeStock, data.showArrondi)}
+      <summary><h2><span class="red">🔴 Critical Stock</span> <button class="export-btn" data-category="negativeStock" data-filter="all" style="margin-left: 1rem; padding: 0.5rem 1rem; background: #c0392b; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export</button><button class="export-unselected-btn" data-category="negativeStock" style="display: none; margin-left: 0.5rem; padding: 0.5rem 1rem; background: #c0392b; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export Unselected</button><button class="export-selected-btn" data-category="negativeStock" style="display: none; margin-left: 0.5rem; padding: 0.5rem 1rem; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export Selected</button></h2></summary>
+      ${buildTable(data.negativeStock, data.showArrondi, false, false, true)}
     </details>
   ` : ''}
 
   ${data.lowStock.length > 0 ? `
     <details open>
-      <summary><h2><span class="orange">🟠 Low Stock</span> <button class="export-btn" data-category="lowStock" style="margin-left: 1rem; padding: 0.5rem 1rem; background: #e67e22; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export</button></h2></summary>
-      ${buildTable(data.lowStock, data.showArrondi)}
+      <summary><h2><span class="orange">🟠 Low Stock</span> <button class="export-btn" data-category="lowStock" data-filter="all" style="margin-left: 1rem; padding: 0.5rem 1rem; background: #e67e22; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export</button><button class="export-unselected-btn" data-category="lowStock" style="display: none; margin-left: 0.5rem; padding: 0.5rem 1rem; background: #e67e22; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export Unselected</button><button class="export-selected-btn" data-category="lowStock" style="display: none; margin-left: 0.5rem; padding: 0.5rem 1rem; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export Selected</button></h2></summary>
+      ${buildTable(data.lowStock, data.showArrondi, false, false, true)}
     </details>
   ` : ''}
 
   ${data.insufficient.length > 0 ? `
     <details open>
-      <summary><h2><span class="yellow">🟡 Ok Stock</span> <button class="export-btn" data-category="insufficient" style="margin-left: 1rem; padding: 0.5rem 1rem; background: #b8860b; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export</button></h2></summary>
-      ${buildTable(data.insufficient, data.showArrondi)}
+      <summary><h2><span class="yellow">🟡 Ok Stock</span> <button class="export-btn" data-category="insufficient" data-filter="all" style="margin-left: 1rem; padding: 0.5rem 1rem; background: #b8860b; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export</button><button class="export-unselected-btn" data-category="insufficient" style="display: none; margin-left: 0.5rem; padding: 0.5rem 1rem; background: #b8860b; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export Unselected</button><button class="export-selected-btn" data-category="insufficient" style="display: none; margin-left: 0.5rem; padding: 0.5rem 1rem; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export Selected</button></h2></summary>
+      ${buildTable(data.insufficient, data.showArrondi, false, false, true)}
     </details>
   ` : ''}
 
   ${data.goodMaterials.length > 0 ? `
     <details ${data.hasProblems ? '' : 'open'}>
-      <summary><h2><span class="green">✅ Good stock</span> <button class="export-btn" data-category="goodMaterials" style="margin-left: 1rem; padding: 0.5rem 1rem; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export</button></h2></summary>
-      ${buildTable(data.goodMaterials, data.showArrondi, true)}
+      <summary><h2><span class="green">✅ Good stock</span> <button class="export-btn" data-category="goodMaterials" data-filter="all" style="margin-left: 1rem; padding: 0.5rem 1rem; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export</button><button class="export-unselected-btn" data-category="goodMaterials" style="display: none; margin-left: 0.5rem; padding: 0.5rem 1rem; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export Unselected</button><button class="export-selected-btn" data-category="goodMaterials" style="display: none; margin-left: 0.5rem; padding: 0.5rem 1rem; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export Selected</button></h2></summary>
+      ${buildTable(data.goodMaterials, data.showArrondi, true, false, false)}
     </details>
   ` : ''}
 
   ${data.incomingStock.length > 0 ? `
     <details>
-      <summary><h2><span class="blue">📦 Incoming Stock</span> <button class="export-btn" data-category="incomingStock" style="margin-left: 1rem; padding: 0.5rem 1rem; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export</button></h2></summary>
-      ${buildTable(data.incomingStock, data.showArrondi, false, true)}
+      <summary><h2><span class="blue">📦 Incoming Stock</span> <button class="export-btn" data-category="incomingStock" data-filter="all" style="margin-left: 1rem; padding: 0.5rem 1rem; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export</button><button class="export-unselected-btn" data-category="incomingStock" style="display: none; margin-left: 0.5rem; padding: 0.5rem 1rem; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export Unselected</button><button class="export-selected-btn" data-category="incomingStock" style="display: none; margin-left: 0.5rem; padding: 0.5rem 1rem; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export Selected</button></h2></summary>
+      ${buildTable(data.incomingStock, data.showArrondi, false, true, false)}
     </details>
   ` : ''}
   `;
 
   document.getElementById('content').innerHTML = reportHtml;
   
+  // Event listeners pour les boutons Select
+  document.querySelectorAll('.select-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const partName = this.getAttribute('data-part-name');
+      const rowId = this.getAttribute('data-row-id');
+      const dataRow = document.getElementById(rowId);
+      
+      // Basculer l'état de sélection
+      if (selectedItems[partName]) {
+        delete selectedItems[partName];
+        this.textContent = '☐'; // Décoché
+        this.style.background = '#f39c12';
+        dataRow.classList.remove('selected');
+      } else {
+        selectedItems[partName] = true;
+        this.textContent = '☑'; // Coché
+        this.style.background = '#27ae60';
+        dataRow.classList.add('selected');
+      }
+      
+      // Mettre à jour la visibilité des boutons export
+      updateExportButtonsVisibility();
+    });
+  });
+  
+  // Event listeners pour les boutons Edit
+  document.querySelectorAll('.edit-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const rowId = this.getAttribute('data-row-id');
+      const editRow = document.getElementById(`edit_${rowId}`);
+      if (editRow.style.display === 'none') {
+        editRow.style.display = 'table-row';
+      } else {
+        editRow.style.display = 'none';
+      }
+    });
+  });
+
+  // Event listeners pour les boutons Save
+  document.querySelectorAll('.save-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const rowId = this.getAttribute('data-row-id');
+      const partName = this.getAttribute('data-part-name');
+      const coverageInput = document.querySelector(`#edit_${rowId} .coverage-input`);
+      const bufferInput = document.querySelector(`#edit_${rowId} .buffer-input`);
+      
+      const newCoverage = parseInt(coverageInput.value);
+      const newBuffer = parseInt(bufferInput.value);
+      
+      // Stocker les modifications pour cette pièce spécifique
+      itemModifications[partName] = {
+        coverage: newCoverage,
+        buffer: newBuffer
+      };
+      
+      // Fermer la rangée d'édition
+      document.getElementById(`edit_${rowId}`).style.display = 'none';
+      
+      // Recalculer seulement cette ligne avec les nouvelles valeurs
+      const dataRow = document.getElementById(rowId);
+      if (dataRow) {
+        // Obtenir la ligne de données correspondante depuis currentData
+        let targetRow = null;
+        const allRows = [
+          ...currentData.negativeStock,
+          ...currentData.lowStock,
+          ...currentData.insufficient,
+          ...currentData.goodMaterials,
+          ...currentData.incomingStock
+        ];
+        
+        targetRow = allRows.find(r => r['Part Name'] === partName);
+        
+        if (targetRow) {
+          // Recalculer avec les valeurs modifiées
+          const stock = targetRow['Stock'];
+          const dailySales = targetRow['Daily Sales'];
+          const isKomacut = targetRow._komacut;
+          
+          // Recalculer Current Days (affichage seulement, ne change pas vraiment)
+          const currentDays = dailySales > 0 ? Math.round((stock / dailySales) * 10) / 10 : 'N/A';
+          
+          // Recalculer les quantités avec les nouvelles valeurs
+          const totalDays = newCoverage + newBuffer;
+          const totalNeed = dailySales * totalDays;
+          const qtyToOrder = totalNeed - stock;
+          
+          let afterDelivery = 'N/A';
+          let exactOrderQty = 0;
+          let roundedOrderQty = '-';
+          
+          if (qtyToOrder > 0) {
+            // Exact Order Quantity
+            const rawQty = Math.ceil(qtyToOrder);
+            exactOrderQty = rawQty;
+            
+            // Déterminer la quantité pour la livraison
+            let qtyForDelivery = rawQty;
+            if (isKomacut) {
+              qtyForDelivery = roundToUpperMarker(rawQty);
+              roundedOrderQty = qtyForDelivery;
+            } else {
+              roundedOrderQty = '-';
+            }
+            
+            // Calculer After Delivery
+            const stockAfter = stock + qtyForDelivery - (dailySales * newBuffer);
+            afterDelivery = dailySales > 0 ? Math.round((stockAfter / dailySales) * 10) / 10 : 'N/A';
+          } else {
+            // qtyToOrder <= 0, donc pas de commande
+            afterDelivery = 'N/A';
+            exactOrderQty = 0;
+            roundedOrderQty = '-';
+          }
+          
+          // Mettre à jour les cellules de la ligne
+          const cells = dataRow.querySelectorAll('td');
+          if (cells.length >= 6) {
+            // cells[0] = Part Name (ne pas modifier)
+            // cells[1] = Stock (ne pas modifier)
+            // cells[2] = Daily Sales (ne pas modifier)
+            cells[3].textContent = currentDays;  // Current Days
+            cells[4].textContent = afterDelivery; // After Delivery
+            cells[5].innerHTML = `<strong>${exactOrderQty}</strong>`; // Exact Order Quantity
+            
+            // Rounded Order Quantity (si present)
+            if (cells.length >= 7) {
+              cells[6].innerHTML = `<strong>${roundedOrderQty}</strong>`; // Rounded Order Quantity
+            }
+          }
+        }
+      }
+    });
+  });
+
+  // Event listeners pour les boutons Cancel
+  document.querySelectorAll('.cancel-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const rowId = this.getAttribute('data-row-id');
+      document.getElementById(`edit_${rowId}`).style.display = 'none';
+    });
+  });
+  
+  // Fonction pour mettre à jour la visibilité des boutons export
+  function updateExportButtonsVisibility() {
+    document.querySelectorAll('.export-btn').forEach(btn => {
+      const category = btn.getAttribute('data-category');
+      const exportUnselectedBtn = btn.parentElement.querySelector(`.export-unselected-btn[data-category="${category}"]`);
+      const exportSelectedBtn = btn.parentElement.querySelector(`.export-selected-btn[data-category="${category}"]`);
+      
+      let hasSelectedItems = false;
+      if (category === 'negativeStock') {
+        hasSelectedItems = currentData.negativeStock.some(r => selectedItems[r['Part Name']]);
+      } else if (category === 'lowStock') {
+        hasSelectedItems = currentData.lowStock.some(r => selectedItems[r['Part Name']]);
+      } else if (category === 'insufficient') {
+        hasSelectedItems = currentData.insufficient.some(r => selectedItems[r['Part Name']]);
+      } else if (category === 'goodMaterials') {
+        hasSelectedItems = currentData.goodMaterials.some(r => selectedItems[r['Part Name']]);
+      } else if (category === 'incomingStock') {
+        hasSelectedItems = currentData.incomingStock.some(r => selectedItems[r['Part Name']]);
+      }
+      
+      if (hasSelectedItems) {
+        // Quand il y a des sélections
+        btn.style.display = 'none';  // Masquer "Export"
+        exportUnselectedBtn.style.display = 'inline-block';  // Afficher "Export Unselected"
+        exportSelectedBtn.style.display = 'inline-block';  // Afficher "Export Selected"
+      } else {
+        // Quand il n'y a pas de sélections
+        btn.style.display = 'inline-block';  // Afficher "Export"
+        exportUnselectedBtn.style.display = 'none';  // Masquer "Export Unselected"
+        exportSelectedBtn.style.display = 'none';  // Masquer "Export Selected"
+      }
+    });
+  }
+  
+  // Event listeners pour les boutons Export (tout)
   document.querySelectorAll('.export-btn').forEach(btn => {
     btn.addEventListener('click', function() {
       const category = this.getAttribute('data-category');
-      let rows, categoryName, isGoodMaterials = false;
+      let rows, categoryName, isGoodMaterials = false, isIncomingStock = false;
       
       if (category === 'negativeStock') {
         rows = currentData.negativeStock;
@@ -470,15 +726,82 @@ async function generateReport(selectedSupplier = null, daysAfterDelivery = DAYS_
       } else if (category === 'incomingStock') {
         rows = currentData.incomingStock;
         categoryName = 'Incoming_Stock';
-        isGoodMaterials = true;
+        isIncomingStock = true;
       }
       
       if (rows) {
         const selectedSupplier = document.getElementById('supplier-select').value;
-        exportToCSV(rows, categoryName, isGoodMaterials, selectedSupplier);
+        exportToCSV(rows, categoryName, isGoodMaterials, selectedSupplier, isIncomingStock, 'all');
       }
     });
   });
+  
+  // Event listeners pour les boutons Export Unselected
+  document.querySelectorAll('.export-unselected-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const category = this.getAttribute('data-category');
+      let rows, categoryName, isGoodMaterials = false, isIncomingStock = false;
+      
+      if (category === 'negativeStock') {
+        rows = currentData.negativeStock;
+        categoryName = 'Critical_Stock';
+      } else if (category === 'lowStock') {
+        rows = currentData.lowStock;
+        categoryName = 'Low_Stock';
+      } else if (category === 'insufficient') {
+        rows = currentData.insufficient;
+        categoryName = 'Ok_Stock';
+      } else if (category === 'goodMaterials') {
+        rows = currentData.goodMaterials;
+        categoryName = 'Good_Materials';
+        isGoodMaterials = true;
+      } else if (category === 'incomingStock') {
+        rows = currentData.incomingStock;
+        categoryName = 'Incoming_Stock';
+        isIncomingStock = true;
+      }
+      
+      if (rows) {
+        const selectedSupplier = document.getElementById('supplier-select').value;
+        exportToCSV(rows, categoryName, isGoodMaterials, selectedSupplier, isIncomingStock, 'unselected');
+      }
+    });
+  });
+  
+  // Event listeners pour les boutons Export Selected
+  document.querySelectorAll('.export-selected-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const category = this.getAttribute('data-category');
+      let rows, categoryName, isGoodMaterials = false, isIncomingStock = false;
+      
+      if (category === 'negativeStock') {
+        rows = currentData.negativeStock;
+        categoryName = 'Critical_Stock';
+      } else if (category === 'lowStock') {
+        rows = currentData.lowStock;
+        categoryName = 'Low_Stock';
+      } else if (category === 'insufficient') {
+        rows = currentData.insufficient;
+        categoryName = 'Ok_Stock';
+      } else if (category === 'goodMaterials') {
+        rows = currentData.goodMaterials;
+        categoryName = 'Good_Materials';
+        isGoodMaterials = true;
+      } else if (category === 'incomingStock') {
+        rows = currentData.incomingStock;
+        categoryName = 'Incoming_Stock';
+        isIncomingStock = true;
+      }
+      
+      if (rows) {
+        const selectedSupplier = document.getElementById('supplier-select').value;
+        exportToCSV(rows, categoryName, isGoodMaterials, selectedSupplier, isIncomingStock, 'selected');
+      }
+    });
+  });
+  
+  // Appel initial pour mettre à jour les boutons
+  updateExportButtonsVisibility();
 }
 
 // Initialiser le filtrage par supplier

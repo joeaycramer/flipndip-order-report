@@ -103,8 +103,8 @@
     }
     
     #content {
-      padding: 2rem;
-      max-width: 1400px;
+      padding: 0.5rem 1rem;
+      max-width: 100%;
       margin: auto;
     }
     h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
@@ -121,6 +121,7 @@
       padding: 1rem;
       margin-bottom: 1.5rem;
       box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      transition: all 0.8s ease;
     }
     details[open] {
       box-shadow: 0 2px 6px rgba(0,0,0,0.1);
@@ -129,17 +130,38 @@
       cursor: pointer;
       user-select: none;
       padding: 0.5rem 0;
+      transition: opacity 0.2s ease;
     }
     details > summary:hover {
-      opacity: 0.8;
+      opacity: 1;
     }
     details > summary h2 {
       margin: 0;
       display: inline;
       color: #ddd;
     }
+    .export-btn, .export-unselected-btn, .export-selected-btn {
+      transition: background 0.2s ease, transform 0.1s ease !important;
+    }
+    .export-btn:hover, .export-unselected-btn:hover, .export-selected-btn:hover {
+      filter: brightness(1.1) !important;
+      transform: translateY(-1px) !important;
+    }
     details > *:not(summary) {
       margin-top: 1rem;
+      animation: slideDown 0.3s ease forwards;
+    }
+    
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        max-height: 0;
+        overflow: hidden;
+      }
+      to {
+        opacity: 1;
+        max-height: 1000px;
+      }
     }
     .red   { color: #c0392b; }
     .orange{ color: #e67e22; }
@@ -166,14 +188,67 @@
       border-bottom: 1px solid #444;
       width: 300px
     }
+    th:first-child {
+      width: 450px;
+    }
     td {
       padding: 9px 14px;
       font-size: 0.9rem;
       border-bottom: 1px solid #444;
       color: #ddd;
     }
+    td:first-child {
+      width: 450px;
+    }
     tr:last-child td { border-bottom: none; }
-    tr:hover td { background: #3a3a3a; }
+    tr.editable-row { transition: background 0.2s ease; }
+    tr.editable-row.selected td { background: #3d5a3d !important; }
+    tr.editable-row:hover td { background: #3a3a3a; }
+    tr.editable-row.selected:hover td { background: #4a7a4a !important; }
+    tr.editable-row:hover .edit-btn { 
+      display: inline-block !important;
+      animation: fadeIn 0.2s ease;
+    }
+    tr.editable-row:hover .select-btn { 
+      display: inline-block !important;
+      animation: fadeIn 0.2s ease;
+    }
+    .part-name-cell {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 10px;
+    }
+    .select-btn {
+      display: none !important;
+      animation: fadeIn 0.2s ease;
+      padding: 2px 8px !important;
+      background: #2d2d2d !important;
+      color: white !important;
+      border: none !important;
+      border-radius: 3px !important;
+      cursor: pointer !important;
+      font-size: 0.8rem !important;
+      min-width: 20px;
+      text-align: center;
+    }
+    .edit-btn {
+      display: none !important;
+      animation: fadeIn 0.2s ease;
+      padding: 2px 8px !important;
+      margin-left: 5px !important;
+      background: #2d2d2d !important;
+      color: white !important;
+      border: none !important;
+      border-radius: 3px !important;
+      cursor: pointer !important;
+      font-size: 0.8rem !important;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .edit-row { transition: all 0.3s ease; }
     strong { font-weight: 600; }
     .filter-box {
       background: #2d2d2d;
@@ -221,7 +296,7 @@
 </head>
 <body>
   <div class="upload-section">
-    <h1>Flip n Dip order report generator</h1>
+    <h1>FLIP N DIP ORDER REPORT GENERATOR</h1>
     <p>Upload your CSV file to get started</p>
     <div class="upload-box">
       <label for="csv-file">📁 Choose CSV File:</label>
