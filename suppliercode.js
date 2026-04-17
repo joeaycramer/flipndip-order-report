@@ -158,14 +158,11 @@ async function handleCSVUpload(event) {
     document.getElementById('supplier-select').value = '';
     
     // Save CSV metadata to Firebase
-    if (window.firebaseDB) {
+    if (window.saveCSVMetadata) {
       try {
         const fileName = file.name;
         const timestamp = new Date();
-        
-        // Dynamic import to use the Firebase functions
-        const { saveCSVMetadata } = await import('./firebase-config.js');
-        await saveCSVMetadata(fileName, timestamp, csvContent);
+        await window.saveCSVMetadata(fileName, timestamp, csvContent);
       } catch (error) {
         console.error('Error saving to Firebase:', error);
       }
