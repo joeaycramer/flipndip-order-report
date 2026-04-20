@@ -135,7 +135,6 @@
       to {
         opacity: 0;
         max-height: 0;
-        overflow: hidden;
       }
     }
     
@@ -151,10 +150,6 @@
     details[open] {
       animation: slideDown 0.8s ease forwards;
       box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-    
-    details:not([open]) {
-      animation: slideUp 0.8s ease forwards;
     }
     
     details > summary {
