@@ -30,8 +30,9 @@ A web-based inventory management tool for analyzing stock levels, identifying lo
 ### Prerequisites
 - Modern web browser (Chrome, Firefox, Safari, Edge)
 - CSV file with inventory data in the format of `raw_materials with PO.csv`
+- **Important**: Must use a local web server (cannot use `file://` protocol due to CORS and ES6 module restrictions)
 
-### Installation
+### Installation & Running
 
 1. Clone the repository:
 ```bash
@@ -39,7 +40,26 @@ git clone https://github.com/yourusername/flipndip-order-report.git
 cd flipndip-order-report
 ```
 
-2. Open `index.html` in your web browser
+2. **Start a local web server** (choose one):
+
+   **Option A: Python 3 (macOS/Linux)**
+   ```bash
+   python3 -m http.server 8000
+   ```
+   Then open: `http://localhost:8000`
+
+   **Option B: Node.js with http-server**
+   ```bash
+   npm install -g http-server
+   http-server
+   ```
+   Then open: `http://localhost:8080`
+
+   **Option C: VS Code Live Server Extension**
+   - Install the "Live Server" extension in VS Code
+   - Right-click `index.html` → "Open with Live Server"
+
+3. Open your browser and navigate to the local server URL
 
 ### Usage
 
