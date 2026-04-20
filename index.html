@@ -114,6 +114,19 @@
       margin-bottom: 2rem;
     }
     h2 { font-size: 1.1rem; margin: 2rem 0 0.5rem; color: #ddd; }
+    
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        max-height: 0;
+        overflow: hidden;
+      }
+      to {
+        opacity: 1;
+        max-height: 1000px;
+      }
+    }
+    
     details {
       background: #2d2d2d;
       border: 1px solid #444;
@@ -121,11 +134,13 @@
       padding: 1rem;
       margin-bottom: 1.5rem;
       box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-      transition: all 0.8s ease;
     }
+    
     details[open] {
+      animation: slideDown 0.8s ease;
       box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
+    
     details > summary {
       cursor: pointer;
       user-select: none;
