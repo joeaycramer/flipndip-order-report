@@ -115,17 +115,6 @@
     }
     h2 { font-size: 1.1rem; margin: 2rem 0 0.5rem; color: #ddd; }
     
-    @keyframes slideDown {
-      from {
-        max-height: 0;
-        opacity: 0;
-      }
-      to {
-        max-height: 1000px;
-        opacity: 1;
-      }
-    }
-    
     details {
       background: #2d2d2d;
       border: 1px solid #444;
@@ -133,13 +122,22 @@
       padding: 1rem;
       margin-bottom: 1.5rem;
       box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-      transition: box-shadow 0.8s ease;
+      transition: box-shadow 0.3s ease;
       overflow: hidden;
     }
     
     details[open] {
-      animation: slideDown 0.8s ease forwards;
       box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    
+    /* Transition pour les éléments enfants (contenu) */
+    details > :not(summary) {
+      opacity: 0;
+      transition: opacity 0.8s ease;
+    }
+    
+    details[open] > :not(summary) {
+      opacity: 1;
     }
     
     details > summary {
