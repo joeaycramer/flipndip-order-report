@@ -46,6 +46,41 @@ function parseCSVLine(line) {
   return result;
 }
 
+// ── Fonction pour recalculer la quantité avec les modifications ────
+function calculateQuantityWithModifications(row, modifiedCoverage = null, modifiedBuffer = null) {
+  const stock = row['Stock'] || 0;
+  const dailySales = row['Daily Sales'] || 0;
+  
+  // Utiliser les modifications s'il y en a, sinon utiliser DAYS_TO_COVER et LEAD_TIME
+  const coverage = modifiedCoverage !== null ? modifiedCoverage : DAYS_TO_COVER;
+  const buffer = modifiedBuffer !== null ? modifiedBuffer : LEAD_TIME;
+  
+  const totalDays = coverage + buffer;
+  const totalNeed = dailySales * totalDays;
+  const qtyToOrder = totalNeed - stock;
+  
+  if (qtyToOrder <= 0) {
+    return null; // Pas besoin de commander
+  }
+  
+  const rawQty = Math.ceil(qtyToOrder);
+  const isKomacut = row['_komacut'];
+  
+  if (isKomacut) {
+    return roundToUpperMarker(rawQty);
+  }
+  
+  return rawQty;
+}
+
+// ── Fonction pour arrondir aux marqueurs ────
+function roundToUpperMarker(qty) {
+  for (let marker of MARKERS) {
+    if (qty <= marker) return marker;
+  }
+  return Math.ceil(qty / 50) * 50;
+}
+
 // ── Exporter un tableau en CSV ───────────────────────────────────
 function exportToCSV(rows, categoryName, isGoodMaterials = false, selectedSupplier = '', isIncomingStock = false, filterMode = 'all') {
   // filterMode peut être: 'all' (tous), 'selected' (seulement sélectionnés), 'unselected' (seulement non-sélectionnés)
@@ -167,31 +202,28 @@ function exportAllSelected(selectedSupplier = '') {
     return;
   }
 
-  // Créer le CSV avec tous les items sélectionnés
-  let headers, csvContent;
-  const isAllSuppliers = !selectedSupplier || selectedSupplier === '';
-
-  headers = ['Part Name', 'Stock', 'Daily Sales', 'Current Days', 'After Delivery', 'Exact Order Quantity'];
-  const hasRounded = allSelectedRows.some(r => r['Rounded Order Quantity'] !== undefined);
-  if (hasRounded) {
-    headers.push('Rounded Order Quantity');
-  }
-
-  csvContent = headers.map(h => `"${h}"`).join(',') + '\n';
+  // Créer le CSV avec tous les items sélectionnés - SEULEMENT Materials et Quantity
+  const headers = ['Materials', 'Quantity'];
+  let csvContent = headers.map(h => `"${h}"`).join(',') + '\n';
 
   allSelectedRows.forEach(r => {
     const rowData = [];
     rowData.push(`"${r['Part Name']}"`);
-    rowData.push(`"${r['Stock']}"`);
-    rowData.push(`"${r['Daily Sales']}"`);
-    rowData.push(`"${r['Current Days']}"`);
-    rowData.push(`"${r['After Delivery'] || 'N/A'}"`);
-    rowData.push(`"${r['Exact Order Quantity'] || 'N/A'}"`);
-    if (hasRounded) {
-      const arrondi = r['Rounded Order Quantity'] !== null && r['Rounded Order Quantity'] !== '-' ? r['Rounded Order Quantity'] : '-';
-      rowData.push(`"${arrondi}"`);
+    
+    // Obtenir les modifications pour cette pièce s'il y en a
+    const modifications = itemModifications[r['Part Name']] || {};
+    const modifiedCoverage = modifications.coverage || null;
+    const modifiedBuffer = modifications.buffer || null;
+    
+    // Recalculer la quantité avec les modifications
+    let quantity = calculateQuantityWithModifications(r, modifiedCoverage, modifiedBuffer);
+    
+    // Si la quantité est null (pas besoin de commander), utiliser 0
+    if (quantity === null) {
+      quantity = 0;
     }
     
+    rowData.push(`"${quantity}"`);
     csvContent += rowData.join(',') + '\n';
   });
 
@@ -253,23 +285,6 @@ async function loadCSVContent() {
   console.log('Loading CSV from server:', CSV_PATH);
   const response = await fetch(CSV_PATH);
   return await response.text();
-}
-
-function roundToUpperMarker(qty) {
-  if (qty > 50 && qty <= 100) {
-    return Math.ceil(qty / 10) * 10;
-  }
-  else if (qty > 100) {
-    return Math.ceil(qty / 50) * 50;
-  }
-  else {
-    for (let m of MARKERS) {
-      if (m >= qty) {
-        return m;
-      }
-    }
-    return Math.ceil(qty / 50) * 50;
-  }
 }
 
 // Charger et traiter les données CSV
