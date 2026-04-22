@@ -202,6 +202,10 @@ function exportAllSelected(selectedSupplier = '') {
     return;
   }
 
+  // Lire les valeurs actuelles du DOM (Coverage et Buffer Time)
+  const currentCoverage = parseInt(document.getElementById('days-after-delivery').value) || DAYS_TO_COVER;
+  const currentBuffer = parseInt(document.getElementById('lead-time').value) || LEAD_TIME;
+
   // Créer le CSV avec tous les items sélectionnés - SEULEMENT Materials et Quantity
   const headers = ['Materials', 'Quantity'];
   let csvContent = headers.map(h => `"${h}"`).join(',') + '\n';
@@ -212,15 +216,21 @@ function exportAllSelected(selectedSupplier = '') {
     
     // Obtenir les modifications pour cette pièce s'il y en a
     const modifications = itemModifications[r['Part Name']] || {};
-    const modifiedCoverage = modifications.coverage || null;
-    const modifiedBuffer = modifications.buffer || null;
+    const modifiedCoverage = modifications.coverage !== undefined ? modifications.coverage : currentCoverage;
+    const modifiedBuffer = modifications.buffer !== undefined ? modifications.buffer : currentBuffer;
     
-    // Recalculer la quantité avec les modifications
-    let quantity = calculateQuantityWithModifications(r, modifiedCoverage, modifiedBuffer);
+    // Recalculer la quantité avec les modifications et les valeurs actuelles
+    const stock = toFloat(r['Stock']) || 0;
+    const dailySales = toFloat(r['Daily Sales']) || 0;
+    const totalDays = modifiedCoverage + modifiedBuffer;
+    const totalNeed = dailySales * totalDays;
+    const qtyToOrder = totalNeed - stock;
     
-    // Si la quantité est null (pas besoin de commander), utiliser 0
-    if (quantity === null) {
-      quantity = 0;
+    let quantity = 0;
+    if (qtyToOrder > 0) {
+      const rawQty = Math.ceil(qtyToOrder);
+      const isKomacut = r['_komacut'];
+      quantity = isKomacut ? roundToUpperMarker(rawQty) : rawQty;
     }
     
     rowData.push(`"${quantity}"`);
