@@ -264,6 +264,7 @@ async function loadAndProcessData(selectedSupplier = null, daysAfterDelivery = D
           'Daily Sales': Math.round(dailySales * 10000) / 10000,
           'Current Days': daysInv !== null ? daysInv : 'N/A',
           'Incoming Inventory': Math.round(incomingInventory * 100) / 100,
+          'Supplier': supplier,
           '_komacut': supplier.toLowerCase().includes('komacut'),
         };
         incomingStock.push(entry);
@@ -283,6 +284,7 @@ async function loadAndProcessData(selectedSupplier = null, daysAfterDelivery = D
         'Daily Sales': Math.round(dailySales * 10000) / 10000,
         'Current Days': daysInv !== null ? daysInv : 'N/A',
         'Incoming Inventory': Math.round(incomingInventory * 100) / 100,
+        'Supplier': supplier,
         '_komacut': rowKomacut,
       };
 
@@ -369,7 +371,7 @@ async function getSuppliers() {
 }
 
 // Construire un tableau HTML
-function buildTable(rows, showArrondi, isGoodMaterials = false, isIncomingStock = false, enableEdit = false) {
+function buildTable(rows, showArrondi, isGoodMaterials = false, isIncomingStock = false, enableEdit = false, showSupplier = false) {
   if (rows.length === 0) {
     return '<p><em>Aucune pièce dans cette catégorie.</em></p>';
   }
@@ -378,6 +380,9 @@ function buildTable(rows, showArrondi, isGoodMaterials = false, isIncomingStock 
 
   if (isIncomingStock) {
     headers = ['Part Name', 'Stock', 'Daily Sales', 'Current Days', 'Incoming Inventory', 'Lasting Days After Delivery'];
+    if (showSupplier) {
+      headers.push('Supplier');
+    }
     
     html = '<table>\n<thead><tr>';
     headers.forEach(h => {
@@ -398,10 +403,16 @@ function buildTable(rows, showArrondi, isGoodMaterials = false, isIncomingStock 
       html += `<td>${r['Current Days']}</td>`;
       html += `<td>${r['Incoming Inventory']}</td>`;
       html += `<td>${lastingDaysAfterDelivery}</td>`;
+      if (showSupplier) {
+        html += `<td>${r['Supplier'] || 'N/A'}</td>`;
+      }
       html += '</tr>\n';
     });
   } else if (isGoodMaterials) {
     headers = ['Part Name', 'Stock', 'Daily Sales', 'Current Days', 'Incoming Inventory'];
+    if (showSupplier) {
+      headers.push('Supplier');
+    }
     
     html = '<table>\n<thead><tr>';
     headers.forEach(h => {
@@ -416,12 +427,18 @@ function buildTable(rows, showArrondi, isGoodMaterials = false, isIncomingStock 
       html += `<td>${r['Daily Sales']}</td>`;
       html += `<td>${r['Current Days']}</td>`;
       html += `<td>${r['Incoming Inventory']}</td>`;
+      if (showSupplier) {
+        html += `<td>${r['Supplier'] || 'N/A'}</td>`;
+      }
       html += '</tr>\n';
     });
   } else {
     headers = ['Part Name', 'Stock', 'Daily Sales', 'Current Days', 'After Delivery', 'Exact Order Quantity'];
     if (showArrondi) {
       headers.push('Rounded Order Quantity');
+    }
+    if (showSupplier) {
+      headers.push('Supplier');
     }
 
     html = '<table>\n<thead><tr>';
@@ -451,6 +468,9 @@ function buildTable(rows, showArrondi, isGoodMaterials = false, isIncomingStock 
       if (showArrondi) {
         const arrondi = r['Rounded Order Quantity'] !== null && r['Rounded Order Quantity'] !== '-' ? r['Rounded Order Quantity'] : '-';
         html += `<td><strong>${arrondi}</strong></td>`;
+      }
+      if (showSupplier) {
+        html += `<td>${r['Supplier'] || 'N/A'}</td>`;
       }
       html += '</tr>\n';
       
@@ -502,6 +522,9 @@ async function generateReport(selectedSupplier = null, daysAfterDelivery = DAYS_
 
   currentData = data;
 
+  // Déterminer si on affiche tous les suppliers
+  const showSupplier = !selectedSupplier || selectedSupplier === '0';
+
   const reportHtml = `
   <h1>Order Report — ${selectedSupplier || 'All Suppliers'}</h1>
   <div class="meta">
@@ -514,35 +537,35 @@ async function generateReport(selectedSupplier = null, daysAfterDelivery = DAYS_
   ${data.negativeStock.length > 0 ? `
     <details open>
       <summary><h2><span class="red">🔴 Critical Stock</span> <button class="export-btn" data-category="negativeStock" data-filter="all" style="margin-left: 1rem; padding: 0.5rem 1rem; background: #c0392b; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export</button><button class="export-unselected-btn" data-category="negativeStock" style="display: none; margin-left: 0.5rem; padding: 0.5rem 1rem; background: #c0392b; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export Unselected</button><button class="export-selected-btn" data-category="negativeStock" style="display: none; margin-left: 0.5rem; padding: 0.5rem 1rem; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export Selected</button></h2></summary>
-      ${buildTable(data.negativeStock, data.showArrondi, false, false, true)}
+      ${buildTable(data.negativeStock, data.showArrondi, false, false, true, showSupplier)}
     </details>
   ` : ''}
 
   ${data.lowStock.length > 0 ? `
     <details open>
       <summary><h2><span class="orange">🟠 Low Stock</span> <button class="export-btn" data-category="lowStock" data-filter="all" style="margin-left: 1rem; padding: 0.5rem 1rem; background: #e67e22; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export</button><button class="export-unselected-btn" data-category="lowStock" style="display: none; margin-left: 0.5rem; padding: 0.5rem 1rem; background: #e67e22; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export Unselected</button><button class="export-selected-btn" data-category="lowStock" style="display: none; margin-left: 0.5rem; padding: 0.5rem 1rem; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export Selected</button></h2></summary>
-      ${buildTable(data.lowStock, data.showArrondi, false, false, true)}
+      ${buildTable(data.lowStock, data.showArrondi, false, false, true, showSupplier)}
     </details>
   ` : ''}
 
   ${data.insufficient.length > 0 ? `
     <details open>
       <summary><h2><span class="yellow">🟡 Ok Stock</span> <button class="export-btn" data-category="insufficient" data-filter="all" style="margin-left: 1rem; padding: 0.5rem 1rem; background: #b8860b; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export</button><button class="export-unselected-btn" data-category="insufficient" style="display: none; margin-left: 0.5rem; padding: 0.5rem 1rem; background: #b8860b; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export Unselected</button><button class="export-selected-btn" data-category="insufficient" style="display: none; margin-left: 0.5rem; padding: 0.5rem 1rem; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export Selected</button></h2></summary>
-      ${buildTable(data.insufficient, data.showArrondi, false, false, true)}
+      ${buildTable(data.insufficient, data.showArrondi, false, false, true, showSupplier)}
     </details>
   ` : ''}
 
   ${data.goodMaterials.length > 0 ? `
     <details ${data.hasProblems ? '' : 'open'}>
       <summary><h2><span class="green">✅ Good stock</span> <button class="export-btn" data-category="goodMaterials" data-filter="all" style="margin-left: 1rem; padding: 0.5rem 1rem; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export</button><button class="export-unselected-btn" data-category="goodMaterials" style="display: none; margin-left: 0.5rem; padding: 0.5rem 1rem; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export Unselected</button><button class="export-selected-btn" data-category="goodMaterials" style="display: none; margin-left: 0.5rem; padding: 0.5rem 1rem; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export Selected</button></h2></summary>
-      ${buildTable(data.goodMaterials, data.showArrondi, true, false, false)}
+      ${buildTable(data.goodMaterials, data.showArrondi, true, false, false, showSupplier)}
     </details>
   ` : ''}
 
   ${data.incomingStock.length > 0 ? `
     <details>
       <summary><h2><span class="blue">📦 Incoming Stock</span> <button class="export-btn" data-category="incomingStock" data-filter="all" style="margin-left: 1rem; padding: 0.5rem 1rem; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export</button><button class="export-unselected-btn" data-category="incomingStock" style="display: none; margin-left: 0.5rem; padding: 0.5rem 1rem; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export Unselected</button><button class="export-selected-btn" data-category="incomingStock" style="display: none; margin-left: 0.5rem; padding: 0.5rem 1rem; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">⬇️ Export Selected</button></h2></summary>
-      ${buildTable(data.incomingStock, data.showArrondi, false, true, false)}
+      ${buildTable(data.incomingStock, data.showArrondi, false, true, false, showSupplier)}
     </details>
   ` : ''}
   `;
