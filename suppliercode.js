@@ -144,6 +144,66 @@ function exportToCSV(rows, categoryName, isGoodMaterials = false, selectedSuppli
   document.body.removeChild(element);
 }
 
+// ── Exporter tous les items sélectionnés (peu importe la catégorie) ────
+function exportAllSelected(selectedSupplier = '') {
+  // Collecter tous les items sélectionnés de toutes les catégories
+  const allSelectedRows = [];
+  
+  if (currentData) {
+    [currentData.negativeStock, currentData.lowStock, currentData.insufficient, currentData.goodMaterials, currentData.incomingStock]
+      .forEach(category => {
+        if (category) {
+          category.forEach(row => {
+            if (selectedItems[row['Part Name']]) {
+              allSelectedRows.push(row);
+            }
+          });
+        }
+      });
+  }
+
+  if (allSelectedRows.length === 0) {
+    alert('Aucun élément sélectionné à exporter.');
+    return;
+  }
+
+  // Créer le CSV avec tous les items sélectionnés
+  let headers, csvContent;
+  const isAllSuppliers = !selectedSupplier || selectedSupplier === '';
+
+  headers = ['Part Name', 'Stock', 'Daily Sales', 'Current Days', 'After Delivery', 'Exact Order Quantity'];
+  const hasRounded = allSelectedRows.some(r => r['Rounded Order Quantity'] !== undefined);
+  if (hasRounded) {
+    headers.push('Rounded Order Quantity');
+  }
+
+  csvContent = headers.map(h => `"${h}"`).join(',') + '\n';
+
+  allSelectedRows.forEach(r => {
+    const rowData = [];
+    rowData.push(`"${r['Part Name']}"`);
+    rowData.push(`"${r['Stock']}"`);
+    rowData.push(`"${r['Daily Sales']}"`);
+    rowData.push(`"${r['Current Days']}"`);
+    rowData.push(`"${r['After Delivery'] || 'N/A'}"`);
+    rowData.push(`"${r['Exact Order Quantity'] || 'N/A'}"`);
+    if (hasRounded) {
+      const arrondi = r['Rounded Order Quantity'] !== null && r['Rounded Order Quantity'] !== '-' ? r['Rounded Order Quantity'] : '-';
+      rowData.push(`"${arrondi}"`);
+    }
+    
+    csvContent += rowData.join(',') + '\n';
+  });
+
+  const element = document.createElement('a');
+  element.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvContent));
+  element.setAttribute('download', `All_Selected_${new Date().toISOString().slice(0, 10)}.csv`);
+  element.style.display = 'none';
+  document.body.appendChild(element);
+  element.click();
+  document.body.removeChild(element);
+}
+
 // Gérer l'upload d'un fichier CSV
 let csvContent = null;
 let currentData = null;
@@ -526,12 +586,17 @@ async function generateReport(selectedSupplier = null, daysAfterDelivery = DAYS_
   const showSupplier = !selectedSupplier || selectedSupplier === '0';
 
   const reportHtml = `
-  <h1>Order Report — ${selectedSupplier || 'All Suppliers'}</h1>
-  <div class="meta">
-    Coverage Period: <strong>${daysAfterDelivery} days</strong> &nbsp;|&nbsp;
-    Lead Time: <strong>${LEAD_TIME} days</strong> &nbsp;|&nbsp;
-    Total Parts to Order: <strong>${data.negativeStock.length + data.lowStock.length + data.insufficient.length}</strong>
-    ${data.showArrondi ? `&nbsp;|&nbsp; Markers: <strong>${MARKERS.join(', ')}, then ×50</strong>` : ''}
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <div>
+      <h1>Order Report — ${selectedSupplier || 'All Suppliers'}</h1>
+      <div class="meta">
+        Coverage Period: <strong>${daysAfterDelivery} days</strong> &nbsp;|&nbsp;
+        Lead Time: <strong>${LEAD_TIME} days</strong> &nbsp;|&nbsp;
+        Total Parts to Order: <strong>${data.negativeStock.length + data.lowStock.length + data.insufficient.length}</strong>
+        ${data.showArrondi ? `&nbsp;|&nbsp; Markers: <strong>${MARKERS.join(', ')}, then ×50</strong>` : ''}
+      </div>
+    </div>
+    <button id="export-all-selected-btn" style="display: none; padding: 0.75rem 1.5rem; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.95rem; font-weight: 600; white-space: nowrap; margin-left: 1rem;">⬇️ Export All Selected</button>
   </div>
 
   ${data.negativeStock.length > 0 ? `
@@ -571,6 +636,14 @@ async function generateReport(selectedSupplier = null, daysAfterDelivery = DAYS_
   `;
 
   document.getElementById('content').innerHTML = reportHtml;
+  
+  // Event listener pour le bouton "Export All Selected"
+  const exportAllBtn = document.getElementById('export-all-selected-btn');
+  if (exportAllBtn) {
+    exportAllBtn.addEventListener('click', function() {
+      exportAllSelected(selectedSupplier);
+    });
+  }
   
   // Event listeners pour les boutons Select
   document.querySelectorAll('.select-btn').forEach(btn => {
@@ -749,6 +822,13 @@ async function generateReport(selectedSupplier = null, daysAfterDelivery = DAYS_
         exportSelectedBtn.style.display = 'none';  // Masquer "Export Selected"
       }
     });
+    
+    // Montrer/masquer le bouton "Export All Selected"
+    const exportAllBtn = document.getElementById('export-all-selected-btn');
+    if (exportAllBtn) {
+      const hasAnySelected = Object.keys(selectedItems).length > 0;
+      exportAllBtn.style.display = hasAnySelected ? 'inline-block' : 'none';
+    }
   }
   
   // Event listeners pour les boutons Export (tout)
