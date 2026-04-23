@@ -142,14 +142,16 @@ function displayRecentFiles(files) {
   const resetBtn = document.createElement('button');
   resetBtn.textContent = '🔄 Reset All';
   resetBtn.style.cssText = `
-    padding: 0.5rem 1rem;
+    padding: 0.5rem 0.75rem;
     background: #e74c3c;
     color: white;
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    font-weight: bold;
     transition: background 0.2s ease;
+    white-space: nowrap;
   `;
   resetBtn.onmouseover = () => resetBtn.style.background = '#c0392b';
   resetBtn.onmouseout = () => resetBtn.style.background = '#e74c3c';
