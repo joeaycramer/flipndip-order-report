@@ -588,7 +588,7 @@ function buildTable(rows, showArrondi, isGoodMaterials = false, isIncomingStock 
           <option value="90" ${(storedModifications.coverage || DAYS_TO_COVER) == 90 ? 'selected' : ''}>3 months</option>
           <option value="120" ${(storedModifications.coverage || DAYS_TO_COVER) == 120 ? 'selected' : ''}>4 months</option>
         </select></div>`;
-        html += `<div><label style="color: #ddd;">Buffer Time:</label><br><select class="buffer-input" style="width: 120px; padding: 5px; background: #2d2d2d; color: #ddd; border: 1px solid #666; border-radius: 3px; cursor: pointer;">
+        html += `<div><label style="color: #ddd;">Delivery Time:</label><br><select class="buffer-input" style="width: 120px; padding: 5px; background: #2d2d2d; color: #ddd; border: 1px solid #666; border-radius: 3px; cursor: pointer;">
           <option value="7" ${(storedModifications.buffer || LEAD_TIME) == 7 ? 'selected' : ''}>1 week</option>
           <option value="14" ${(storedModifications.buffer || LEAD_TIME) == 14 ? 'selected' : ''}>2 weeks</option>
           <option value="21" ${(storedModifications.buffer || LEAD_TIME) == 21 ? 'selected' : ''}>3 weeks</option>
