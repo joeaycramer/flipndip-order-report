@@ -611,9 +611,9 @@ function buildTable(rows, showArrondi, isGoodMaterials = false, isIncomingStock 
 
 // Générer et afficher le rapport
 async function generateReport(selectedSupplier = null, daysAfterDelivery = DAYS_TO_COVER, leadTime = LEAD_TIME) {
-  // Réinitialiser les sélections à chaque nouveau rapport
+  // Réinitialiser SEULEMENT les sélections, PAS les modifications
   selectedItems = {};
-  itemModifications = {};
+  // NE PAS réinitialiser itemModifications - conserver les modifications précédentes
   
   LEAD_TIME = leadTime;
   
