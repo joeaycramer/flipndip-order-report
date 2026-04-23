@@ -325,6 +325,40 @@
     .tips-content p {
       margin: 0.5rem 0;
     }
+    .recent-files-container {
+      margin-top: 1.5rem;
+      text-align: center;
+    }
+    .recent-files-container summary {
+      cursor: pointer;
+      user-select: none;
+      font-weight: 600;
+      color: #ddd;
+      padding: 0.5rem;
+    }
+    .recent-files-container summary:hover {
+      opacity: 0.8;
+    }
+    #recent-files-list {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+      justify-content: center;
+    }
+    #recent-files-list button {
+      padding: 0.5rem 1rem;
+      background: rgba(102, 126, 234, 0.2);
+      color: #667eea;
+      border: 1px solid #667eea;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.2s ease;
+    }
+    #recent-files-list button:hover {
+      background: rgba(102, 126, 234, 0.3);
+    }
   </style>
 </head>
 <body>
@@ -334,9 +368,15 @@
     <div class="upload-box">
       <label for="csv-file">📁 Choose CSV File:</label>
       <input type="file" id="csv-file" accept=".csv" onchange="handleCSVUpload(event)">
+      
+      <!-- Section des fichiers récents - Intégrée dans upload-box -->
+      <details id="recent-files-section" style="display: none; margin-top: 1.5rem;">
+        <summary style="cursor: pointer; user-select: none; text-align: center; font-weight: 600; color: #ddd; padding: 0.5rem;">📁 Recent Files</summary>
+        <div id="recent-files-list" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; justify-content: center;"></div>
+      </details>
     </div>
     <div class="tips">
-      <details open>
+      <details>
         <summary>💡 Tips & How to Use</summary>
         <div class="tips-content">
           <p>To use this webapp, upload the material report, choose the supplier, coverage and delivery time to be able to view all the inventory and recommended quantity to purchase.</p>
@@ -373,12 +413,6 @@
       </select>
     </div>
   </div>
-
-  <!-- Section des fichiers récents -->
-  <details id="recent-files-section" open style="display: none; background: #2d2d2d; padding: 1rem; margin: 0.5rem 1rem; border-radius: 6px; border: 1px solid #444;">
-    <summary style="cursor: pointer; user-select: none;"><h2 style="margin: 0; color: #ddd; font-size: 1.2rem; display: inline;">📁 Recent Files</h2></summary>
-    <div id="recent-files-list" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; justify-content: flex-start;"></div>
-  </details>
 
   <div id="content">Loading...</div>
   <script type="module" src="firebase-config.js"></script>
