@@ -643,7 +643,6 @@ async function generateReport(selectedSupplier = null, daysAfterDelivery = DAYS_
         Coverage Period: <strong>${daysAfterDelivery} days</strong> &nbsp;|&nbsp;
         Lead Time: <strong>${LEAD_TIME} days</strong> &nbsp;|&nbsp;
         Total Parts to Order: <strong>${data.negativeStock.length + data.lowStock.length + data.insufficient.length}</strong>
-        ${data.showArrondi ? `&nbsp;|&nbsp; Markers: <strong>${MARKERS.join(', ')}, then ×50</strong>` : ''}
       </div>
     </div>
     <button id="export-all-selected-btn" style="display: none; padding: 0.75rem 1.5rem; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.95rem; font-weight: 600; white-space: nowrap; margin-left: 1rem;">⬇️ Export All Selected</button>
