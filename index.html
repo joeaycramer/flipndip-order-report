@@ -123,7 +123,6 @@
       margin-bottom: 1.5rem;
       box-shadow: 0 1px 3px rgba(0,0,0,0.05);
       transition: box-shadow 0.3s ease;
-      overflow: hidden;
     }
     
     details[open] {
@@ -134,17 +133,19 @@
     details > :not(summary) {
       opacity: 0;
       transition: opacity 0.8s ease;
+      max-height: 0;
+      overflow: hidden;
     }
     
     details[open] > :not(summary) {
       opacity: 1;
+      max-height: 1000px;
     }
     
     details > summary {
       cursor: pointer;
       user-select: none;
       padding: 0.5rem 0;
-      transition: opacity 0.2s ease;
     }
     details > summary:hover {
       opacity: 1;
@@ -163,19 +164,6 @@
     }
     details > *:not(summary) {
       margin-top: 1rem;
-      animation: slideDown 0.3s ease forwards;
-    }
-    
-    @keyframes slideDown {
-      from {
-        opacity: 0;
-        max-height: 0;
-        overflow: hidden;
-      }
-      to {
-        opacity: 1;
-        max-height: 1000px;
-      }
     }
     .red   { color: #c0392b; }
     .orange{ color: #e67e22; }
@@ -306,6 +294,40 @@
     .filter-box button:hover {
       background: #5568d3;
     }
+    .tips {
+      background: rgba(102, 126, 234, 0.1);
+      border: 1px solid rgba(102, 126, 234, 0.3);
+      border-radius: 8px;
+      padding: 1.5rem;
+      max-width: 450px;
+      width: 100%;
+      margin-top: 1.5rem;
+      backdrop-filter: blur(10px);
+    }
+    .tips summary {
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 600;
+      color: #667eea;
+      padding: 0.5rem;
+    }
+    .tips summary:hover {
+      opacity: 0.8;
+    }
+    .tips-content {
+      color: #ddd;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(102, 126, 234, 0.2);
+    }
+    .tips-content p {
+      margin: 0.5rem 0;
+    }
   </style>
 </head>
 <body>
@@ -315,6 +337,16 @@
     <div class="upload-box">
       <label for="csv-file">📁 Choose CSV File:</label>
       <input type="file" id="csv-file" accept=".csv" onchange="handleCSVUpload(event)">
+    </div>
+    <div class="tips">
+      <details open>
+        <summary>💡 Tips & How to Use</summary>
+        <div class="tips-content">
+          <p>To use this webapp, upload the material report, choose the supplier, coverage and delivery time to be able to view all the inventory and recommended quantity to purchase.</p>
+          <p>- You can edit individually each parts coverage and delivery time if you prefer.</p>
+          <p>- Select the parts you want to see in the purchase order by ticking the rows, or if you prefer, export the entire category in a purchase order</p>
+        </div>
+      </details>
     </div>
   </div>
 
@@ -333,7 +365,7 @@
         <option value="120">4 months</option>
       </select>
       
-      <label for="lead-time">📦 Buffer Time:</label>
+      <label for="lead-time">📦 Delivery Time:</label>
       <select id="lead-time" onchange="applyFilter()">
         <option value="7">1 week</option>
         <option value="14">2 weeks</option>
