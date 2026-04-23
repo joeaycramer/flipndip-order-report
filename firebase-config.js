@@ -280,9 +280,14 @@ async function loadRecentFile(file) {
     
     if (typeof window.initializeFilter === 'function' && typeof window.generateReport === 'function') {
       console.log('Functions available, initializing...');
+      
+      // Appeler initializeFilter EN PREMIER pour remplir la liste des suppliers
+      console.log('Calling initializeFilter...');
       await window.initializeFilter();
       console.log('initializeFilter completed');
       
+      // Puis appeler generateReport pour afficher le rapport
+      console.log('Calling generateReport...');
       await window.generateReport();
       console.log('generateReport completed');
       

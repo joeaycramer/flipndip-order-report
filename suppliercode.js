@@ -611,6 +611,12 @@ function buildTable(rows, showArrondi, isGoodMaterials = false, isIncomingStock 
 
 // Générer et afficher le rapport
 async function generateReport(selectedSupplier = null, daysAfterDelivery = DAYS_TO_COVER, leadTime = LEAD_TIME) {
+  // Synchroniser csvContent avec window.csvContent si nécessaire (fichiers récents depuis Firebase)
+  if (!csvContent && window.csvContent) {
+    csvContent = window.csvContent;
+    console.log('Synced csvContent from window.csvContent');
+  }
+  
   // Réinitialiser SEULEMENT les sélections, PAS les modifications
   selectedItems = {};
   // NE PAS réinitialiser itemModifications - conserver les modifications précédentes
@@ -978,7 +984,8 @@ async function generateReport(selectedSupplier = null, daysAfterDelivery = DAYS_
 // Initialiser le filtrage par supplier
 async function initializeFilter() {
   // Si aucun CSV n'a été uploadé, ne rien faire
-  if (!csvContent) {
+  // Vérifier à la fois csvContent (local) et window.csvContent (Firebase)
+  if (!csvContent && !window.csvContent) {
     return;
   }
   
@@ -1005,5 +1012,5 @@ window.generateReport = generateReport;
 // Initialisation
 window.addEventListener('DOMContentLoaded', async () => {
   // Afficher un message par défaut au lieu de charger les données
-  document.getElementById('content').innerHTML = '<p style="text-align: center; color: #999; padding: 2rem;">📁 Veuillez uploader un fichier CSV pour commencer</p>';
+  document.getElementById('content').innerHTML = '<p style="text-align: center; color: #999; padding: 2rem;">📁 Upload CSV file to generate the order report </p>';
 });
