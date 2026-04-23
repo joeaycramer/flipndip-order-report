@@ -152,6 +152,11 @@ function displayRecentFiles(files) {
     font-weight: bold;
     transition: background 0.2s ease;
     white-space: nowrap;
+    line-height: 1.2;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   `;
   resetBtn.onmouseover = () => resetBtn.style.background = '#c0392b';
   resetBtn.onmouseout = () => resetBtn.style.background = '#e74c3c';
@@ -202,19 +207,29 @@ function displayRecentFiles(files) {
         font-weight: bold;
         transition: background 0.2s ease;
         white-space: nowrap;
+        line-height: 1.2;
+        height: 100%;
+        display: flex;
+        align-items: center;
       `;
     } else {
       // Full display version: show only date/time
       button.textContent = `${dateStr}`;
       button.style.cssText = `
-        padding: 0.5rem 1rem;
+        padding: 0.5rem 0.75rem;
         background: #3498db;
         color: white;
         border: none;
         border-radius: 4px;
         cursor: pointer;
-        font-size: 0.9rem;
+        font-size: 0.85rem;
+        font-weight: bold;
         transition: background 0.2s ease;
+        white-space: nowrap;
+        line-height: 1.2;
+        height: 100%;
+        display: flex;
+        align-items: center;
       `;
     }
     
