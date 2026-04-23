@@ -142,8 +142,6 @@ function exportToCSV(rows, categoryName, isGoodMaterials = false, selectedSuppli
     } else if (isGoodMaterials) {
       rowData.push(`"${r['Part Name']}"`);
     } else {
-      rowData.push(`"${r['Part Name']}"`);
-      
       const isKomacut = selectedSupplier && selectedSupplier.toLowerCase() === 'komacut';
       const isAllSuppliers = !selectedSupplier || selectedSupplier === '';
       
@@ -164,6 +162,13 @@ function exportToCSV(rows, categoryName, isGoodMaterials = false, selectedSuppli
         quantity = r['Exact Order Quantity'];
       }
       
+      // Filtrer: ne pas exporter si la quantité < 1
+      const quantityNum = parseInt(quantity) || 0;
+      if (quantityNum < 1) {
+        return; // Sauter cette ligne
+      }
+      
+      rowData.push(`"${r['Part Name']}"`);
       rowData.push(`"${quantity}"`);
     }
     
