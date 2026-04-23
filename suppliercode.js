@@ -209,11 +209,9 @@ function exportAllSelected(selectedSupplier = '') {
   // Créer le CSV avec tous les items sélectionnés - SEULEMENT Materials et Quantity
   const headers = ['Materials', 'Quantity'];
   let csvContent = headers.map(h => `"${h}"`).join(',') + '\n';
+  let hasValidRows = false;
 
   allSelectedRows.forEach(r => {
-    const rowData = [];
-    rowData.push(`"${r['Part Name']}"`);
-    
     // Obtenir les modifications pour cette pièce s'il y en a
     const modifications = itemModifications[r['Part Name']] || {};
     const modifiedCoverage = modifications.coverage !== undefined ? modifications.coverage : currentCoverage;
@@ -233,9 +231,21 @@ function exportAllSelected(selectedSupplier = '') {
       quantity = isKomacut ? roundToUpperMarker(rawQty) : rawQty;
     }
     
-    rowData.push(`"${quantity}"`);
-    csvContent += rowData.join(',') + '\n';
+    // Ajouter au CSV seulement si la quantité est >= 1
+    if (quantity >= 1) {
+      const rowData = [];
+      rowData.push(`"${r['Part Name']}"`);
+      rowData.push(`"${quantity}"`);
+      csvContent += rowData.join(',') + '\n';
+      hasValidRows = true;
+    }
   });
+
+  // Si aucune pièce n'a besoin d'être commandée, afficher un message
+  if (!hasValidRows) {
+    alert('Aucune pièce ne nécessite une commande (toutes les quantités sont 0).');
+    return;
+  }
 
   const element = document.createElement('a');
   element.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvContent));
@@ -596,6 +606,10 @@ function buildTable(rows, showArrondi, isGoodMaterials = false, isIncomingStock 
 
 // Générer et afficher le rapport
 async function generateReport(selectedSupplier = null, daysAfterDelivery = DAYS_TO_COVER, leadTime = LEAD_TIME) {
+  // Réinitialiser les sélections à chaque nouveau rapport
+  selectedItems = {};
+  itemModifications = {};
+  
   LEAD_TIME = leadTime;
   
   const data = await loadAndProcessData(selectedSupplier, daysAfterDelivery);
