@@ -186,8 +186,8 @@ function displayRecentFiles(files) {
     const button = document.createElement('button');
     
     if (useCompactDisplay) {
-      // Compact version: show 3 letters + date/time with tooltip for full name
-      button.textContent = `${displayName} (${dateStr})`;
+      // Compact version: show only date/time
+      button.textContent = `${dateStr}`;
       button.title = `${file.fileName}\n${fileSize}`;
       button.style.cssText = `
         padding: 0.5rem 0.75rem;
@@ -202,8 +202,8 @@ function displayRecentFiles(files) {
         white-space: nowrap;
       `;
     } else {
-      // Full display version
-      button.textContent = `${displayName} (${dateStr}) - ${fileSize}`;
+      // Full display version: show only date/time
+      button.textContent = `${dateStr}`;
       button.style.cssText = `
         padding: 0.5rem 1rem;
         background: #3498db;
