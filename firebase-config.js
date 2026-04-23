@@ -166,10 +166,13 @@ function displayRecentFiles(files) {
   files.forEach((file, index) => {
     const date = new Date(file.uploadedAt);
     const dateStr = date.toLocaleDateString('en-US', {
+      weekday: 'short',
       month: 'short',
       day: 'numeric',
+      year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      hour12: true
     });
     
     const fileSize = file.size ? (file.size / 1024).toFixed(1) + ' KB' : 'N/A';
